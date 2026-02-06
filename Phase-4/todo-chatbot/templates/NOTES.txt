@@ -1,0 +1,5 @@
+TaskMaster Pro AI has been deployed successfully!
+
+Components:
+  - Backend (FastAPI):  {{ include "taskmaster.backend.fullname" . }}
+  - Frontend (Next.js): {{ include "taskmaster.frontend.fullname" . }}

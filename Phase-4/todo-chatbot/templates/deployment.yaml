@@ -1,0 +1,11 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "taskmaster.backend.fullname" . }}
+  labels:
+    {{- include "taskmaster.backend.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "taskmaster.backend.selectorLabels" . | nindent 6 }}
