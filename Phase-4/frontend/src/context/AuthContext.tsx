@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 interface User {
   id: string;
   email: string;
@@ -32,46 +34,28 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USERS_STORAGE_KEY = "taskmaster_users";
-const SESSION_STORAGE_KEY = "taskmaster_session";
+const TOKEN_KEY = "taskmaster_token";
 
-function generateUserId(): string {
-  return `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
-
-function hashPassword(password: string): string {
-  // Simple hash for demo purposes - in production use bcrypt on server
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return hash.toString(16);
-}
-
-function getStoredUsers(): Record<string, { user: User; passwordHash: string }> {
-  if (typeof window === "undefined") return {};
-  const stored = localStorage.getItem(USERS_STORAGE_KEY);
-  return stored ? JSON.parse(stored) : {};
-}
-
-function saveUsers(users: Record<string, { user: User; passwordHash: string }>) {
-  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-}
-
-function getSession(): User | null {
+function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  const stored = localStorage.getItem(SESSION_STORAGE_KEY);
-  return stored ? JSON.parse(stored) : null;
+  return localStorage.getItem(TOKEN_KEY);
 }
 
-function saveSession(user: User | null) {
-  if (user) {
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
+function saveToken(token: string | null) {
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
   } else {
-    localStorage.removeItem(SESSION_STORAGE_KEY);
+    localStorage.removeItem(TOKEN_KEY);
   }
+}
+
+function mapApiUser(apiUser: Record<string, any>): User {
+  return {
+    id: String(apiUser.id),
+    email: apiUser.email,
+    name: apiUser.username,
+    createdAt: apiUser.created_at,
+  };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -80,34 +64,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Check for existing session on mount
-    const session = getSession();
-    if (session) {
-      setUser(session);
+    // Restore session from token on mount
+    const token = getToken();
+    if (token) {
+      fetch(`${API_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Invalid token");
+          return res.json();
+        })
+        .then((data) => setUser(mapApiUser(data)))
+        .catch(() => {
+          saveToken(null);
+        })
+        .finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
     setIsLoading(true);
     try {
-      const users = getStoredUsers();
-      const userEntry = users[credentials.email];
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
 
-      if (!userEntry) {
-        throw new Error("User not found. Please sign up first.");
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: "Login failed" }));
+        throw new Error(error.detail || "Login failed");
       }
 
-      const passwordHash = hashPassword(credentials.password);
-      if (userEntry.passwordHash !== passwordHash) {
-        throw new Error("Invalid password. Please try again.");
-      }
-
-      setUser(userEntry.user);
-      saveSession(userEntry.user);
+      const data = await response.json();
+      saveToken(data.access_token);
+      setUser(mapApiUser(data.user));
       router.push("/chat");
-    } catch (error) {
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -116,30 +110,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = async (credentials: SignupCredentials) => {
     setIsLoading(true);
     try {
-      const users = getStoredUsers();
+      const response = await fetch(`${API_URL}/api/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
 
-      if (users[credentials.email]) {
-        throw new Error("Email already registered. Please login instead.");
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: "Signup failed" }));
+        throw new Error(error.detail || "Signup failed");
       }
 
-      const newUser: User = {
-        id: generateUserId(),
-        email: credentials.email,
-        name: credentials.name,
-        createdAt: new Date().toISOString(),
-      };
-
-      users[credentials.email] = {
-        user: newUser,
-        passwordHash: hashPassword(credentials.password),
-      };
-
-      saveUsers(users);
-      setUser(newUser);
-      saveSession(newUser);
+      const data = await response.json();
+      saveToken(data.access_token);
+      setUser(mapApiUser(data.user));
       router.push("/chat");
-    } catch (error) {
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -147,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    saveSession(null);
+    saveToken(null);
     router.push("/");
   };
 

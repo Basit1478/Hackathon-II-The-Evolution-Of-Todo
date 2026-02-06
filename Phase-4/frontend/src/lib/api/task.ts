@@ -1,4 +1,5 @@
 import type { Task } from "@/types/chat";
+import { getAuthHeaders } from "./auth-headers";
 
 // Frontend API URL - use NEXT_PUBLIC prefix for client-side access
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -19,7 +20,9 @@ export interface UpdateTaskRequest {
 }
 
 export async function getTasks(userId: string): Promise<Task[]> {
-  const response = await fetch(`${API_URL}/api/${userId}/tasks`);
+  const response = await fetch(`${API_URL}/api/${userId}/tasks`, {
+    headers: getAuthHeaders(),
+  });
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: "Unknown error" }));
     throw new Error(error.detail || "Failed to fetch tasks");
@@ -39,7 +42,10 @@ export async function getTasks(userId: string): Promise<Task[]> {
 export async function createTask(userId: string, task: CreateTaskRequest): Promise<Task> {
   const response = await fetch(`${API_URL}/api/${userId}/tasks`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
     body: JSON.stringify(task),
   });
 
@@ -63,7 +69,10 @@ export async function createTask(userId: string, task: CreateTaskRequest): Promi
 export async function updateTask(userId: string, taskId: string, task: UpdateTaskRequest): Promise<Task> {
   const response = await fetch(`${API_URL}/api/${userId}/tasks/${taskId}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
     body: JSON.stringify(task),
   });
 
@@ -87,6 +96,7 @@ export async function updateTask(userId: string, taskId: string, task: UpdateTas
 export async function deleteTask(userId: string, taskId: string): Promise<void> {
   const response = await fetch(`${API_URL}/api/${userId}/tasks/${taskId}`, {
     method: 'DELETE',
+    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
