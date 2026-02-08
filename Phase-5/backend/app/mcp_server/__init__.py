@@ -1,3 +1,11 @@
-from app.mcp_server.server import MCPToolServer
+"""
+MCP (Model Context Protocol) server implementation.
+"""
 
-__all__ = ["MCPToolServer"]
+from .server import TaskMasterMCPServer
+from .agent_tools import MCPClientWrapper
+
+__all__ = [
+    "TaskMasterMCPServer",
+    "MCPClientWrapper",
+]

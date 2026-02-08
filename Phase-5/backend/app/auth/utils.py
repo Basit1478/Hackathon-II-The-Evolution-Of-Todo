@@ -1,27 +1,52 @@
+import jwt
 from datetime import datetime, timedelta
-from typing import Optional
-from jose import JWTError, jwt
 from passlib.context import CryptContext
-from app.config import get_settings
+from jose.exceptions import ExpiredSignatureError
+from fastapi import HTTPException, status
+from ..config import settings
 
-settings = get_settings()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
 
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+class AuthUtils:
+    """
+    Auth utility class.
+    """
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    def __init__(self, secret_key: str, algorithm: str = "HS256"):
+        self.secret_key = secret_key
+        self.algorithm = algorithm
 
-def decode_access_token(token: str) -> Optional[dict]:
-    try:
-        return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-    except JWTError:
-        return None
+    def hash_password(self, password: str) -> str:
+        return pwd_context.hash(password)
+
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
+        return pwd_context.verify(plain_password, hashed_password)
+
+    def create_access_token(self, user_id: str, expires_minutes: int = 60) -> str:
+        to_encode = {
+            "sub": user_id,
+            "exp": datetime.utcnow() + timedelta(minutes=expires_minutes),
+            "iat": datetime.utcnow(),
+        }
+        return jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
+
+    def decode_token(self, token: str) -> dict:
+        try:
+            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            return payload
+        except ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has expired",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        except jwt.InvalidTokenError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+
+auth_utils = AuthUtils(secret_key=settings.BETTER_AUTH_SECRET)

@@ -1,4 +1,12 @@
-from app.auth.utils import verify_password, get_password_hash, create_access_token, decode_access_token
-from app.auth.dependencies import get_current_user, get_current_active_user
+"""
+Authentication utilities for the TaskMaster backend.
+"""
 
-__all__ = ["verify_password", "get_password_hash", "create_access_token", "decode_access_token", "get_current_user", "get_current_active_user"]
+from .utils import auth_utils
+from .dependencies import get_current_user_id, get_db_session
+
+__all__ = [
+    "auth_utils",
+    "get_current_user_id",
+    "get_db_session",
+]

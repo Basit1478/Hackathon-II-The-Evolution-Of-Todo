@@ -1,3 +1,11 @@
-from app.db.database import get_session, init_db, AsyncSessionLocal
+"""
+Database connection module.
+"""
 
-__all__ = ["get_session", "init_db", "AsyncSessionLocal"]
+from .database import engine, get_session, init_db
+
+__all__ = [
+    "engine",
+    "get_session",
+    "init_db",
+]

@@ -1,19 +1,19 @@
-from sqlmodel import SQLModel, create_engine
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-from app.config import get_settings
+from sqlmodel import SQLModel, create_engine, Session
+from .config import settings
 
-settings = get_settings()
+engine = create_engine(
+    settings.DATABASE_URL,
+    echo=True,
+    connect_args={
+        "sslmode": "require"
+    } if "postgresql" in settings.DATABASE_URL else {}
+)
 
-async_engine = create_async_engine(settings.database_url, echo=False, pool_size=5, max_overflow=10)
-AsyncSessionLocal = sessionmaker(bind=async_engine, class_=AsyncSession, expire_on_commit=False)
-sync_database_url = settings.database_url.replace("postgresql+asyncpg://", "postgresql://")
-engine = create_engine(sync_database_url, echo=False, pool_size=5, max_overflow=10)
 
-async def get_session() -> AsyncSession:
-    async with AsyncSessionLocal() as session:
+def get_session():
+    with Session(engine) as session:
         yield session
 
-async def init_db():
-    async with async_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+
+def init_db():
+    SQLModel.metadata.create_all(engine)
