@@ -1,47 +1,97 @@
-from typing import Optional, List
-from pydantic import BaseModel, Field
+from typing import Dict, Any, Optional
+from ..config import settings
+from ..db.database import get_session
+from ..models.task import Task
+from sqlmodel import Session
 
-class AddTaskInput(BaseModel):
-    user_id: str
-    title: str = Field(min_length=1, max_length=200)
-    description: Optional[str] = None
-    priority: str = "medium"
-    tags: List[str] = []
-    due_date: Optional[str] = None
-    recurring: Optional[str] = None
-    reminders: List[str] = []
 
-class AddTaskOutput(BaseModel):
-    task_id: int
-    status: str = "created"
-    title: str
-    priority: str
-    tags: List[str]
+class TaskService:
+    """
+    Service class for managing tasks.
+    """
 
-async def add_task_tool(session, input_data: AddTaskInput) -> AddTaskOutput:
-    from datetime import datetime
-    from app.services.task_service import TaskService
-    service = TaskService(session)
-    due_date = datetime.fromisoformat(input_data.due_date.replace("Z", "+00:00")) if input_data.due_date else None
-    reminders = [datetime.fromisoformat(r.replace("Z", "+00:00")) for r in input_data.reminders]
-    task = await service.create_task(user_id=input_data.user_id, title=input_data.title, description=input_data.description, priority=input_data.priority, tags=input_data.tags, due_date=due_date, recurring=input_data.recurring, reminders=reminders)
-    return AddTaskOutput(task_id=task.id, status="created", title=task.title, priority=task.priority, tags=list(task.tags) if task.tags else [])
+    def __init__(self):
+        self.session = get_session()
 
-TOOL_DEFINITION = {
-    "name": "add_task",
-    "description": "Add a new task to the user's task list",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "user_id": {"type": "string", "description": "The user's ID"},
-            "title": {"type": "string", "description": "The task title", "minLength": 1, "maxLength": 200},
-            "description": {"type": "string", "description": "Optional task description"},
-            "priority": {"type": "string", "enum": ["high", "medium", "low"], "description": "Task priority level"},
-            "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags for categorization"},
-            "due_date": {"type": "string", "description": "Due date in ISO 8601 format"},
-            "recurring": {"type": "string", "enum": ["daily", "weekly", "monthly"], "description": "Recurrence interval"},
-            "reminders": {"type": "array", "items": {"type": "string"}, "description": "Reminder datetimes in ISO 8601"},
-        },
-        "required": ["user_id", "title"],
-    },
-}
+    def create_task(
+        self,
+        title: str,
+        description: Optional[str] = None,
+        due_date: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Create a new task.
+
+        Args:
+            title: Task title
+            description: Task description (optional)
+            due_date: Due date in ISO format (optional)
+
+        Returns:
+            Dict with task details
+        """
+        task = Task(
+            title=title,
+            description=description,
+            status="pending",
+            due_date=due_date,
+        )
+        self.session.add(task)
+        self.session.commit()
+        self.session.refresh(task)
+        return self._task_to_dict(task)
+
+    def list_tasks(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        List all tasks, optionally filtered by status.
+
+        Args:
+            status: Filter by task status (pending, in_progress, done)
+
+        Returns:
+            List of task dictionaries
+        """
+        query = self.session.query(Task)
+        if status:
+            query = query.filter(Task.status == status)
+        tasks = query.all()
+        return [self._task_to_dict(task) for task in tasks]
+
+    def update_task_status(
+        self, task_id: int, status: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Update a task's status.
+
+        Args:
+            task_id: Task ID to update
+            status: New status (pending, in_progress, done)
+
+        Returns:
+            Updated task dictionary or None if task not found
+        """
+        task = self.session.get(Task, task_id)
+        if not task:
+            return None
+        task.status = status
+        self.session.commit()
+        self.session.refresh(task)
+        return self._task_to_dict(task)
+
+    def _task_to_dict(self, task: Task) -> Dict[str, Any]:
+        """Convert Task model to dictionary."""
+        return {
+            "id": task.id,
+            "title": task.title,
+            "description": task.description,
+            "status": task.status,
+            "due_date": task.due_date,
+            "created_at": task.created_at,
+            "updated_at": task.updated_at,
+        }
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.session.close()
