@@ -1,21 +1,41 @@
----
-description: "Task list template for feature implementation"
----
+# Tasks Template
 
-# Tasks: [FEATURE NAME]
+# Implementation Tasks
 
-**Input**: Design documents from `/specs/[###-feature-name]/`
+## Feature
+[Feature Name]
 
-## Phase 1: Setup
+## Overview
+[Short description of what this feature does]
 
-- [ ] T001 Create project structure per implementation plan
+## Tasks
 
-## Phase 2: Foundational
+### Task 1: [Task Name]
+- **Description**: [Detailed description of the task]
+- **Priority**: [High/Medium/Low]
+- **Dependencies**: [Tasks this depends on]
+- **Estimated Time**: [Time estimate]
+- **Owner**: [Who is responsible]
+- **Status**: [Not Started/In Progress/Completed]
+- **Acceptance Criteria**: [How to know when it's done]
 
-- [ ] T004 Setup database schema
+### Task 2: [Task Name]
+- **Description**: [Detailed description of the task]
+- **Priority**: [High/Medium/Low]
+- **Dependencies**: [Tasks this depends on]
+- **Estimated Time**: [Time estimate]
+- **Owner**: [Who is responsible]
+- **Status**: [Not Started/In Progress/Completed]
+- **Acceptance Criteria**: [How to know when it's done]
 
-## Phase 3: User Story 1
+### Task 3: [Task Name]
+- **Description**: [Detailed description of the task]
+- **Priority**: [High/Medium/Low]
+- **Dependencies**: [Tasks this depends on]
+- **Estimated Time**: [Time estimate]
+- **Owner**: [Who is responsible]
+- **Status**: [Not Started/In Progress/Completed]
+- **Acceptance Criteria**: [How to know when it's done]
 
-- [ ] T012 Create models
-- [ ] T014 Implement services
-- [ ] T015 Implement endpoints
+## Notes
+[Any additional notes or considerations]
