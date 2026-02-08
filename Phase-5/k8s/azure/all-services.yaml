@@ -1,284 +1,221 @@
-# ============================================================
-# TaskMaster Pro AI - Azure AKS Deployment
-# ACR: taskmasterprodacr.azurecr.io
-# ============================================================
-
-# --- Kafka (KRaft mode) ---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: kafka
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: kafka
-  template:
-    metadata:
-      labels:
-        app: kafka
-    spec:
-      containers:
-        - name: kafka
-          image: apache/kafka:latest
-          ports:
-            - containerPort: 9092
-          env:
-            - name: KAFKA_NODE_ID
-              value: "1"
-            - name: KAFKA_PROCESS_ROLES
-              value: "broker,controller"
-            - name: KAFKA_LISTENERS
-              value: "PLAINTEXT://:9092,CONTROLLER://:9093"
-            - name: KAFKA_ADVERTISED_LISTENERS
-              value: "PLAINTEXT://kafka:9092"
-            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
-              value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
-            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-              value: "1@localhost:9093"
-            - name: KAFKA_CONTROLLER_LISTENER_NAMES
-              value: "CONTROLLER"
-            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
-              value: "1"
-            - name: CLUSTER_ID
-              value: "MkU3OEVBNTcwNTJENDM2Qk"
-          resources:
-            requests:
-              memory: "512Mi"
-              cpu: "250m"
-            limits:
-              memory: "1Gi"
-              cpu: "500m"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: kafka
-spec:
-  selector:
-    app: kafka
-  ports:
-    - port: 9092
-      targetPort: 9092
----
-# --- Dapr Pub/Sub Component ---
-apiVersion: dapr.io/v1alpha1
-kind: Component
-metadata:
-  name: taskmaster-pubsub
-spec:
-  type: pubsub.kafka
-  version: v1
-  metadata:
-    - name: brokers
-      value: "kafka:9092"
-    - name: consumerGroup
-      value: "taskmaster-group"
-    - name: authType
-      value: "none"
----
-# --- Backend ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: taskmaster-backend
+  labels:
+    app: taskmaster
+    component: backend
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: taskmaster-backend
+      app: taskmaster
+      component: backend
   template:
     metadata:
       labels:
-        app: taskmaster-backend
-      annotations:
-        dapr.io/enabled: "true"
-        dapr.io/app-id: "taskmaster-backend"
-        dapr.io/app-port: "8000"
+        app: taskmaster
+        component: backend
     spec:
       containers:
-        - name: backend
-          image: taskmasterprodacr.azurecr.io/taskmaster-backend:v1
-          ports:
-            - containerPort: 8000
-          env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: taskmaster-secrets
-                  key: database-url
-            - name: GROQ_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: taskmaster-secrets
-                  key: groq-api-key
-            - name: BETTER_AUTH_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: taskmaster-secrets
-                  key: better-auth-secret
-            - name: CORS_ORIGINS
-              value: '["*"]'
-            - name: DAPR_HTTP_PORT
-              value: "3500"
-            - name: PUBSUB_NAME
-              value: "taskmaster-pubsub"
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 10
-            periodSeconds: 5
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 15
-            periodSeconds: 10
+      - name: backend
+        image: taskmaster/backend:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: taskmaster-secret
+              key: DATABASE_URL
+        - name: GROQ_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: taskmaster-secret
+              key: GROQ_API_KEY
+        - name: BETTER_AUTH_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: taskmaster-secret
+              key: BETTER_AUTH_SECRET
+        - name: REDIS_URL
+          value: redis://taskmaster-redis-master:6379
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: taskmaster-backend
+  labels:
+    app: taskmaster
+    component: backend
 spec:
-  type: LoadBalancer
-  selector:
-    app: taskmaster-backend
+  type: ClusterIP
   ports:
-    - port: 8000
-      targetPort: 8000
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: taskmaster
+    component: backend
 ---
-# --- Frontend ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: taskmaster-frontend
+  labels:
+    app: taskmaster
+    component: frontend
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: taskmaster-frontend
+      app: taskmaster
+      component: frontend
   template:
     metadata:
       labels:
-        app: taskmaster-frontend
+        app: taskmaster
+        component: frontend
     spec:
       containers:
-        - name: frontend
-          image: taskmasterprodacr.azurecr.io/taskmaster-frontend:v1
-          ports:
-            - containerPort: 3000
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 3000
-            initialDelaySeconds: 5
-            periodSeconds: 5
+      - name: frontend
+        image: taskmaster/frontend:latest
+        ports:
+        - containerPort: 3000
+          name: http
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: taskmaster-frontend
+  labels:
+    app: taskmaster
+    component: frontend
 spec:
-  type: LoadBalancer
-  selector:
-    app: taskmaster-frontend
+  type: ClusterIP
   ports:
-    - port: 80
-      targetPort: 3000
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: taskmaster
+    component: frontend
 ---
-# --- Recurring Service ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: recurring-service
+  name: taskmaster-notification-service
+  labels:
+    app: taskmaster
+    component: notification
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: recurring-service
+      app: taskmaster
+      component: notification
   template:
     metadata:
       labels:
-        app: recurring-service
-      annotations:
-        dapr.io/enabled: "true"
-        dapr.io/app-id: "recurring-service"
-        dapr.io/app-port: "8001"
+        app: taskmaster
+        component: notification
     spec:
       containers:
-        - name: recurring-service
-          image: taskmasterprodacr.azurecr.io/recurring-service:v1
-          ports:
-            - containerPort: 8001
-          env:
-            - name: BACKEND_URL
-              value: "http://taskmaster-backend:8000"
-            - name: PUBSUB_NAME
-              value: "taskmaster-pubsub"
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8001
-            initialDelaySeconds: 5
-            periodSeconds: 5
+      - name: notification
+        image: taskmaster/notification-service:latest
+        env:
+        - name: REDIS_URL
+          value: redis://taskmaster-redis-master:6379
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: recurring-service
+  name: taskmaster-notification-service
+  labels:
+    app: taskmaster
+    component: notification
 spec:
-  selector:
-    app: recurring-service
+  type: ClusterIP
   ports:
-    - port: 8001
-      targetPort: 8001
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: taskmaster
+    component: notification
 ---
-# --- Notification Service ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: notification-service
+  name: taskmaster-recurring-service
+  labels:
+    app: taskmaster
+    component: recurring
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: notification-service
+      app: taskmaster
+      component: recurring
   template:
     metadata:
       labels:
-        app: notification-service
-      annotations:
-        dapr.io/enabled: "true"
-        dapr.io/app-id: "notification-service"
-        dapr.io/app-port: "8002"
+        app: taskmaster
+        component: recurring
     spec:
       containers:
-        - name: notification-service
-          image: taskmasterprodacr.azurecr.io/notification-service:v1
-          ports:
-            - containerPort: 8002
-          env:
-            - name: BACKEND_URL
-              value: "http://taskmaster-backend:8000"
-            - name: PUBSUB_NAME
-              value: "taskmaster-pubsub"
-            - name: POLL_INTERVAL_SECONDS
-              value: "60"
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8002
-            initialDelaySeconds: 5
-            periodSeconds: 5
+      - name: recurring
+        image: taskmaster/recurring-service:latest
+        env:
+        - name: REDIS_URL
+          value: redis://taskmaster-redis-master:6379
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: notification-service
+  name: taskmaster-recurring-service
+  labels:
+    app: taskmaster
+    component: recurring
 spec:
-  selector:
-    app: notification-service
+  type: ClusterIP
   ports:
-    - port: 8002
-      targetPort: 8002
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: taskmaster
+    component: recurring
