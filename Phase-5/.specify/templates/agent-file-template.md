@@ -1,25 +1,31 @@
-# [PROJECT NAME] Development Guidelines
+# Agent File Template
 
-Auto-generated from all feature plans. Last updated: [DATE]
+# Agent Configuration
 
-## Active Technologies
+## Name
+[Agent Name]
 
-[EXTRACTED FROM ALL PLAN.MD FILES]
+## Description
+[Short description of what this agent does]
 
-## Project Structure
+## Capabilities
+- [Capability 1]
+- [Capability 2]
+- [Capability 3]
 
-```text
-[ACTUAL STRUCTURE FROM PLANS]
+## Tools Available
+- [Tool 1]
+- [Tool 2]
+- [Tool 3]
+
+## Usage
+[When and how to use this agent]
+
+## Dependencies
+- [Dependency 1]
+- [Dependency 2]
+
+## Configuration
+```yaml
+# Configuration settings
 ```
-
-## Commands
-
-[ONLY COMMANDS FOR ACTIVE TECHNOLOGIES]
-
-## Code Style
-
-[LANGUAGE-SPECIFIC, ONLY FOR LANGUAGES IN USE]
-
-## Recent Changes
-
-[LAST 3 FEATURES AND WHAT THEY ADDED]
