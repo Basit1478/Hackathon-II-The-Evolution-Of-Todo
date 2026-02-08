@@ -1,23 +1,36 @@
-# [CHECKLIST TYPE] Checklist: [FEATURE NAME]
+# Checklist Template
 
-**Purpose**: [Brief description of what this checklist covers]
-**Created**: [DATE]
-**Feature**: [Link to spec.md or relevant documentation]
+# Feature Checklist
 
-## [Category 1]
+## Feature Name
+[Feature Name]
 
-- [ ] CHK001 First checklist item with clear action
-- [ ] CHK002 Second checklist item
-- [ ] CHK003 Third checklist item
+## Requirements
+- [ ] [Requirement 1]
+- [ ] [Requirement 2]
+- [ ] [Requirement 3]
 
-## [Category 2]
+## Implementation Tasks
+- [ ] [Task 1]
+- [ ] [Task 2]
+- [ ] [Task 3]
 
-- [ ] CHK004 Another category item
-- [ ] CHK005 Item with specific criteria
-- [ ] CHK006 Final item in this category
+## Testing
+- [ ] [Test 1]
+- [ ] [Test 2]
+- [ ] [Test 3]
+
+## Documentation
+- [ ] [Doc 1]
+- [ ] [Doc 2]
+
+## Review
+- [ ] [Review Item 1]
+- [ ] [Review Item 2]
+
+## Deployment
+- [ ] [Deployment Step 1]
+- [ ] [Deployment Step 2]
 
 ## Notes
-
-- Check items off as completed: `[x]`
-- Add comments or findings inline
-- Link to relevant resources or documentation
+[Any additional notes or considerations]
