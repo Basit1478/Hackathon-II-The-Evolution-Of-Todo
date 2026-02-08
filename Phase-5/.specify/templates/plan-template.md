@@ -1,32 +1,51 @@
-# Implementation Plan: [FEATURE]
+# Plan Template
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+# Implementation Plan
 
-## Summary
+## Feature
+[Feature Name]
 
-[Extract from feature spec]
+## Overview
+[Short description of what this feature does]
 
-## Technical Context
+## Goals
+- [Goal 1]
+- [Goal 2]
+- [Goal 3]
 
-**Language/Version**: [e.g., Python 3.11]
-**Primary Dependencies**: [e.g., FastAPI]
-**Storage**: [if applicable]
-**Testing**: [e.g., pytest]
-**Target Platform**: [e.g., Linux server]
-**Project Type**: [single/web/mobile]
+## Architecture
+[High-level architecture description]
 
-## Constitution Check
+## Components
+- [Component 1]
+- [Component 2]
+- [Component 3]
 
-[Gates determined based on constitution file]
+## Implementation Steps
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
 
-## Project Structure
+## Dependencies
+- [Dependency 1]
+- [Dependency 2]
 
-```text
-specs/[###-feature]/
-```
+## Risks
+- [Risk 1]
+- [Risk 2]
 
-## Complexity Tracking
+## Success Criteria
+- [Criteria 1]
+- [Criteria 2]
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
+## Timeline
+[Estimated timeline for implementation]
+
+## Resources
+[Resources needed for implementation]
+
+## Testing Strategy
+[How the feature will be tested]
+
+## Deployment Plan
+[How the feature will be deployed]
