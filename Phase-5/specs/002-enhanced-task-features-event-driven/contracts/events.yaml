@@ -1,0 +1,144 @@
+# Event Contracts: Kafka Topics via Dapr Pub/Sub
+# All events use CloudEvents v1.0 envelope format
+
+topics:
+  task-events:
+    description: Task lifecycle events published by the main backend API
+    pubsub_name: taskmaster-pubsub
+    events:
+      - type: tasks.created
+        source: /api/tasks
+        description: Published when a new task is created
+        data_schema:
+          type: object
+          required: [task_id, user_id, title, priority, tags]
+          properties:
+            task_id:
+              type: integer
+            user_id:
+              type: string
+            title:
+              type: string
+            description:
+              type: string
+              nullable: true
+            priority:
+              type: string
+              enum: [high, medium, low]
+            tags:
+              type: array
+              items:
+                type: string
+            due_date:
+              type: string
+              format: date-time
+              nullable: true
+            recurring:
+              type: string
+              enum: [daily, weekly, monthly]
+              nullable: true
+            reminders:
+              type: array
+              items:
+                type: string
+                format: date-time
+
+      - type: tasks.updated
+        source: /api/tasks
+        description: Published when a task is modified
+        data_schema:
+          type: object
+          required: [task_id, user_id, changes]
+          properties:
+            task_id:
+              type: integer
+            user_id:
+              type: string
+            changes:
+              type: object
+              description: Key-value pairs of changed fields with old/new values
+              additionalProperties:
+                type: object
+                properties:
+                  old:
+                    description: Previous value
+                  new:
+                    description: New value
+
+      - type: tasks.completed
+        source: /api/tasks
+        description: Published when a task is marked as completed
+        data_schema:
+          type: object
+          required: [task_id, user_id, completed_at]
+          properties:
+            task_id:
+              type: integer
+            user_id:
+              type: string
+            title:
+              type: string
+            recurring:
+              type: string
+              enum: [daily, weekly, monthly]
+              nullable: true
+            due_date:
+              type: string
+              format: date-time
+              nullable: true
+            priority:
+              type: string
+              enum: [high, medium, low]
+            tags:
+              type: array
+              items:
+                type: string
+            reminders:
+              type: array
+              items:
+                type: string
+                format: date-time
+            completed_at:
+              type: string
+              format: date-time
+
+  reminder-events:
+    description: Reminder events published by the notification-service
+    pubsub_name: taskmaster-pubsub
+    events:
+      - type: reminders.due
+        source: /services/notification
+        description: Published when a task reminder is due
+        data_schema:
+          type: object
+          required: [task_id, user_id, reminder_time]
+          properties:
+            task_id:
+              type: integer
+            user_id:
+              type: string
+            task_title:
+              type: string
+            due_date:
+              type: string
+              format: date-time
+            reminder_time:
+              type: string
+              format: date-time
+
+# Dapr Component Configuration Reference
+dapr_component:
+  apiVersion: dapr.io/v1alpha1
+  kind: Component
+  metadata:
+    name: taskmaster-pubsub
+  spec:
+    type: pubsub.kafka
+    version: v1
+    metadata:
+      - name: brokers
+        value: kafka:9092
+      - name: consumerGroup
+        value: taskmaster-group
+      - name: authType
+        value: none

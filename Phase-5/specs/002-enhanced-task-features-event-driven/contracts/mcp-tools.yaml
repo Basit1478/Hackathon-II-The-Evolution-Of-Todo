@@ -1,0 +1,190 @@
+# MCP Tool Contracts: Enhanced Task Operations
+# Updates to existing 5 tools + new search/sort capabilities
+
+tools:
+  add_task:
+    name: add_task
+    description: Add a new task to the user's task list
+    input_schema:
+      type: object
+      required: [user_id, title]
+      properties:
+        user_id:
+          type: string
+          description: The user's ID
+        title:
+          type: string
+          description: Task title (1-200 characters)
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          description: Optional task description
+        priority:
+          type: string
+          description: Task priority level
+          enum: [high, medium, low]
+          default: medium
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags for categorization
+          default: []
+        due_date:
+          type: string
+          format: date-time
+          description: Due date in ISO 8601 format
+        recurring:
+          type: string
+          enum: [daily, weekly, monthly]
+          description: Recurrence interval
+        reminders:
+          type: array
+          items:
+            type: string
+            format: date-time
+          description: Reminder datetimes in ISO 8601 format
+          default: []
+    output_schema:
+      type: object
+      properties:
+        task_id:
+          type: integer
+        status:
+          type: string
+        title:
+          type: string
+        priority:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+  list_tasks:
+    name: list_tasks
+    description: List tasks with optional filtering and sorting
+    input_schema:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: string
+          description: The user's ID
+        status:
+          type: string
+          enum: [pending, completed, all]
+          description: Filter by status
+        priority:
+          type: string
+          enum: [high, medium, low]
+          description: Filter by priority
+        tag:
+          type: string
+          description: Filter by tag
+        search:
+          type: string
+          description: Keyword search in title and description
+        sort_by:
+          type: string
+          enum: [date, priority, name]
+          default: date
+          description: Sort field
+        sort_order:
+          type: string
+          enum: [asc, desc]
+          default: desc
+          description: Sort direction
+    output_schema:
+      type: object
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: "#/tools/add_task/output_schema"
+        total:
+          type: integer
+
+  complete_task:
+    name: complete_task
+    description: Mark a task as completed
+    input_schema:
+      type: object
+      required: [user_id, task_id]
+      properties:
+        user_id:
+          type: string
+        task_id:
+          type: integer
+    output_schema:
+      type: object
+      properties:
+        task_id:
+          type: integer
+        status:
+          type: string
+        title:
+          type: string
+
+  delete_task:
+    name: delete_task
+    description: Delete a task
+    input_schema:
+      type: object
+      required: [user_id, task_id]
+      properties:
+        user_id:
+          type: string
+        task_id:
+          type: integer
+    output_schema:
+      type: object
+      properties:
+        task_id:
+          type: integer
+        status:
+          type: string
+        title:
+          type: string
+
+  update_task:
+    name: update_task
+    description: Update a task's properties
+    input_schema:
+      type: object
+      required: [user_id, task_id]
+      properties:
+        user_id:
+          type: string
+        task_id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [high, medium, low]
+        tags:
+          type: array
+          items:
+            type: string
+        due_date:
+          type: string
+          format: date-time
+        recurring:
+          type: string
+          enum: [daily, weekly, monthly]
+        reminders:
+          type: array
+          items:
+            type: string
+            format: date-time
+    output_schema:
+      type: object
+      properties:
+        task_id:
+          type: integer
+        status:
+          type: string
