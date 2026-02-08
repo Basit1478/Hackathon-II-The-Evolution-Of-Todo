@@ -1,0 +1,308 @@
+openapi: "3.1.0"
+info:
+  title: TaskMaster Pro - Enhanced Tasks API
+  version: "2.0.0"
+  description: Task CRUD with priority, tags, due_date, recurring, reminders, search, and sort
+
+paths:
+  /api/{user_id}/tasks:
+    get:
+      operationId: listTasks
+      summary: List tasks with filtering and sorting
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, completed, all]
+        - name: priority
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [high, medium, low]
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by tag (exact match, single tag)
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Keyword search in title and description (ILIKE)
+        - name: sort_by
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [date, priority, name]
+            default: date
+        - name: sort_order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        "200":
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskResponse"
+
+    post:
+      operationId: createTask
+      summary: Create a new task
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskCreateRequest"
+      responses:
+        "200":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+      x-events:
+        - topic: task-events
+          type: tasks.created
+
+  /api/{user_id}/tasks/{task_id}:
+    put:
+      operationId: updateTask
+      summary: Update an existing task
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdateRequest"
+      responses:
+        "200":
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "404":
+          description: Task not found
+      x-events:
+        - topic: task-events
+          type: tasks.updated
+
+    delete:
+      operationId: deleteTask
+      summary: Delete a task
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "404":
+          description: Task not found
+
+  /api/{user_id}/tasks/{task_id}/complete:
+    post:
+      operationId: completeTask
+      summary: Mark a task as completed
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "404":
+          description: Task not found
+      x-events:
+        - topic: task-events
+          type: tasks.completed
+
+components:
+  schemas:
+    TaskCreateRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+        priority:
+          type: string
+          enum: [high, medium, low]
+          default: medium
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 20
+          default: []
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        recurring:
+          type: string
+          enum: [daily, weekly, monthly]
+          nullable: true
+        reminders:
+          type: array
+          items:
+            type: string
+            format: date-time
+          default: []
+
+    TaskUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+        status:
+          type: string
+          enum: [pending, completed]
+        priority:
+          type: string
+          enum: [high, medium, low]
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 20
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        recurring:
+          type: string
+          enum: [daily, weekly, monthly]
+          nullable: true
+        reminders:
+          type: array
+          items:
+            type: string
+            format: date-time
+
+    TaskResponse:
+      type: object
+      required:
+        - id
+        - user_id
+        - title
+        - status
+        - priority
+        - tags
+        - reminders
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, completed]
+        priority:
+          type: string
+          enum: [high, medium, low]
+        tags:
+          type: array
+          items:
+            type: string
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        recurring:
+          type: string
+          enum: [daily, weekly, monthly]
+          nullable: true
+        reminders:
+          type: array
+          items:
+            type: string
+            format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
