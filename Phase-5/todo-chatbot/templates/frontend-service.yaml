@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "taskmaster.frontend.fullname" . }}
+  labels:
+    {{- include "taskmaster.frontend.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: http
+      {{- if and (eq .Values.frontend.service.type "NodePort") .Values.frontend.service.nodePort }}
+      nodePort: {{ .Values.frontend.service.nodePort }}
+      {{- end }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "taskmaster.frontend.selectorLabels" . | nindent 4 }}
