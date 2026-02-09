@@ -17,3 +17,6 @@ This is the main directory for the Phase 5 project containing all the applicatio
 
 ## Purpose
 This structure organizes the complete application stack for the hackathon project.
+
+### The Deploy Link
+Live in Azure (AKS) [http://20.252.55.24/]
