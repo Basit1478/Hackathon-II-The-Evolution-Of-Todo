@@ -1,0 +1,80 @@
+# TaskMaster Pro AI - Helm Values
+# Override these for different environments (local, staging, production)
+
+global:
+  imageTag: latest
+  imagePullPolicy: Never  # Change to IfNotPresent for DOKS
+
+backend:
+  replicaCount: 1
+  image: taskmaster-backend
+  port: 8000
+  nodePort: 30800
+  env:
+    DATABASE_URL: "postgresql+asyncpg://user:pass@postgres:5432/taskmaster"
+    CORS_ORIGINS: '["*"]'
+  dapr:
+    enabled: true
+    appId: taskmaster-backend
+    appPort: "8000"
+
+frontend:
+  replicaCount: 1
+  image: taskmaster-frontend
+  port: 3000
+  nodePort: 30300
+  env:
+    NEXT_PUBLIC_API_URL: "http://taskmaster-backend:8000"
+
+kafka:
+  replicaCount: 1
+  image: bitnami/kafka:3.7
+  port: 9092
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+recurringService:
+  replicaCount: 1
+  image: recurring-service
+  port: 8001
+  env:
+    BACKEND_URL: "http://taskmaster-backend:8000"
+    PUBSUB_NAME: "taskmaster-pubsub"
+  dapr:
+    enabled: true
+    appId: recurring-service
+    appPort: "8001"
+
+notificationService:
+  replicaCount: 1
+  image: notification-service
+  port: 8002
+  env:
+    BACKEND_URL: "http://taskmaster-backend:8000"
+    PUBSUB_NAME: "taskmaster-pubsub"
+    POLL_INTERVAL_SECONDS: "60"
+  dapr:
+    enabled: true
+    appId: notification-service
+    appPort: "8002"
+
+postgres:
+  replicaCount: 1
+  image: postgres:15
+  port: 5432
+  env:
+    POSTGRES_DB: taskmaster
+    POSTGRES_USER: user
+    POSTGRES_PASSWORD: pass
+
+dapr:
+  pubsub:
+    name: taskmaster-pubsub
+    type: pubsub.kafka
+    brokers: "kafka:9092"
+    consumerGroup: "taskmaster-group"
