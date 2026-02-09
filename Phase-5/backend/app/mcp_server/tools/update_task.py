@@ -1,28 +1,26 @@
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
-class AddTaskInput(BaseModel):
+class UpdateTaskInput(BaseModel):
     user_id: str
-    title: str = Field(min_length=1, max_length=200)
+    task_id: int
+    title: Optional[str] = None
     description: Optional[str] = None
-    priority: str = "medium"
-    tags: List[str] = []
+    priority: Optional[str] = None
+    tags: Optional[List[str]] = None
     due_date: Optional[str] = None
     recurring: Optional[str] = None
-    reminders: List[str] = []
+    reminders: Optional[List[str]] = None
 
 
-class AddTaskOutput(BaseModel):
+class UpdateTaskOutput(BaseModel):
     task_id: int
-    status: str = "created"
-    title: str
-    priority: str
-    tags: List[str]
+    status: str = "updated"
 
 
-async def add_task_tool(session, input_data: AddTaskInput) -> AddTaskOutput:
-    """Add a new task for a user."""
+async def update_task_tool(session, input_data: UpdateTaskInput) -> UpdateTaskOutput:
+    """Update a task's properties."""
     from datetime import datetime
     from app.services.task_service import TaskService
 
@@ -34,11 +32,15 @@ async def add_task_tool(session, input_data: AddTaskInput) -> AddTaskOutput:
             input_data.due_date.replace("Z", "+00:00")
         )
 
-    reminders = []
-    for r in input_data.reminders:
-        reminders.append(datetime.fromisoformat(r.replace("Z", "+00:00")))
+    reminders = None
+    if input_data.reminders is not None:
+        reminders = [
+            datetime.fromisoformat(r.replace("Z", "+00:00"))
+            for r in input_data.reminders
+        ]
 
-    task = await service.create_task(
+    task = await service.update_task(
+        task_id=input_data.task_id,
         user_id=input_data.user_id,
         title=input_data.title,
         description=input_data.description,
@@ -49,45 +51,35 @@ async def add_task_tool(session, input_data: AddTaskInput) -> AddTaskOutput:
         reminders=reminders,
     )
 
-    return AddTaskOutput(
-        task_id=task.id,
-        status="created",
-        title=task.title,
-        priority=task.priority,
-        tags=list(task.tags) if task.tags else [],
-    )
+    if not task:
+        raise ValueError(f"Task {input_data.task_id} not found or doesn't belong to user")
+
+    return UpdateTaskOutput(task_id=task.id, status="updated")
 
 
 TOOL_DEFINITION = {
-    "name": "add_task",
-    "description": "Add a new task to the user's task list",
+    "name": "update_task",
+    "description": "Update a task's properties (title, description, priority, tags, due date, recurring, reminders)",
     "input_schema": {
         "type": "object",
         "properties": {
             "user_id": {"type": "string", "description": "The user's ID"},
-            "title": {
-                "type": "string",
-                "description": "The task title (1-200 characters)",
-                "minLength": 1,
-                "maxLength": 200,
-            },
-            "description": {
-                "type": "string",
-                "description": "Optional task description",
-            },
+            "task_id": {"type": "integer", "description": "The ID of the task to update"},
+            "title": {"type": "string", "description": "New title", "maxLength": 200},
+            "description": {"type": "string", "description": "New description"},
             "priority": {
                 "type": "string",
                 "enum": ["high", "medium", "low"],
-                "description": "Task priority level (default: medium)",
+                "description": "New priority level",
             },
             "tags": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Tags for categorization (e.g., work, home, personal)",
+                "description": "New tags (replaces existing)",
             },
             "due_date": {
                 "type": "string",
-                "description": "Due date in ISO 8601 format (e.g., 2026-02-08T17:00:00Z)",
+                "description": "New due date in ISO 8601 format",
             },
             "recurring": {
                 "type": "string",
@@ -100,6 +92,6 @@ TOOL_DEFINITION = {
                 "description": "Reminder datetimes in ISO 8601 format",
             },
         },
-        "required": ["user_id", "title"],
+        "required": ["user_id", "task_id"],
     },
 }
